@@ -145,14 +145,14 @@ export class AuthService {
     if (code !== '1234')
       throw new BadRequestException('Invalid verification code');
 
-    const uodatedUser = await this.userService.updateUser(user.id, {
+    const updatedUserInDb = await this.userService.updateUser(user.id, {
       hasVerifiedPhone: true,
     });
 
     return {
       statusCode: HttpStatus.OK,
       message: 'Successfully verified phone number',
-      data: uodatedUser,
+      data: updatedUserInDb,
     };
   }
 
