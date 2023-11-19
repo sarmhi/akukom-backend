@@ -1,12 +1,6 @@
-export interface IUser {
-  _id?: any;
-  id?: any;
-  email: string;
-  firstName: string;
-  lastName: string;
-  password: string;
+import { User } from 'src/user/models/user.model';
 
-  createdAt?: Date;
-  updatedAt?: Date;
-  phoneOtp?: string;
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface IUser extends User {
+  id?: any;
 }

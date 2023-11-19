@@ -3,12 +3,17 @@ import {
   ForbiddenException,
   HttpStatus,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserSignUpDto } from './dtos/signup.dto';
-import { IResponse } from 'src/common';
+import {
+  CompleteSignupDto,
+  UserSignUpDto,
+  VerifyPhoneNumberDto,
+} from './dtos/signup.dto';
+import { IResponse, IUser } from 'src/common';
 import { UserService } from 'src/user/user.service';
 import { LoginDto } from './dtos/login.dto';
 import * as bcrypt from 'bcryptjs';
@@ -32,34 +37,122 @@ export class AuthService {
    */
   async signUp(body: UserSignUpDto): Promise<IResponse<any>> {
     this.logger.debug('Executing Signup Method');
-    const { phone, email, confirmPassword, password } = body;
+    const { email, confirmPassword, password } = body;
 
     if (confirmPassword !== password)
       throw new ForbiddenException(
         'Password and confirmPassword fields must match',
       );
 
-    if (!phone && !email) {
-      throw new BadRequestException('Please enter valid phone or email');
-    }
-
     //Check if user already exists in the database
-    const foundUser = await this.userService.findUserbyPhoneOrEmail(
-      phone,
-      email,
-    );
+    const foundUser = await this.userService.findUserbyEmail(email);
 
-    console.log({ foundUser });
     if (foundUser)
       throw new ForbiddenException(
         `User already exists. Please login to continue`,
       );
 
-    await this.userService.createUser({ ...body });
+    const createdUser = await this.userService.createUser({ ...body });
+
+    const { accessToken, refreshToken } =
+      await this.tokenService.handleCreateTokens(createdUser.id);
 
     return {
       statusCode: HttpStatus.CREATED,
       message: 'Sign up successful',
+      data: {
+        user: createdUser,
+        accessToken,
+        refreshToken,
+      },
+    };
+  }
+
+  /**
+   *
+   * @param user authenticated user
+   * @param phone authenticated user
+   * @returns Promise of a successful signup
+   */
+  async checkPhoneUsage(phone: string): Promise<IResponse<any>> {
+    const foundUserWithPhoneNumber = await this.userService.findUserbyPhone(
+      phone,
+    );
+
+    if (foundUserWithPhoneNumber)
+      throw new ForbiddenException(
+        'Phone number is already in use by another user.',
+      );
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Phone number is not in use',
+    };
+  }
+
+  /**
+   *
+   * @param body CompleteSignupDto
+   *  @param user authenticated user
+   * @returns Promise of a successful signup
+   */
+  async completeSignup(
+    body: CompleteSignupDto,
+    user: IUser,
+  ): Promise<IResponse<any>> {
+    this.logger.debug('Executing CompleteSignup Method');
+    const { phone } = body;
+
+    const foundUserWithPhoneNumber = await this.userService.findUserbyPhone(
+      phone,
+    );
+
+    if (foundUserWithPhoneNumber)
+      throw new ForbiddenException(
+        'Phone number is already in use by another user.',
+      );
+
+    if (user.hasVerifiedPhone)
+      throw new ForbiddenException(
+        'A verified phone number is already attcahed to this user account',
+      );
+
+    const updatedUserInDb = await this.userService.updateUser(user.id, {
+      ...body,
+    });
+    if (!updatedUserInDb)
+      throw new InternalServerErrorException('Something went wrong');
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Successfully completed signup process',
+      data: updatedUserInDb,
+    };
+  }
+
+  /**
+   *
+   * @param user authenticated user
+   * @param phone authenticated user
+   * @returns Promise of a successful signup
+   */
+  async verifyPhoneNumber(
+    body: VerifyPhoneNumberDto,
+    user: IUser,
+  ): Promise<IResponse<any>> {
+    const { code } = body;
+
+    if (code !== '1234')
+      throw new BadRequestException('Invalid verification code');
+
+    const uodatedUser = await this.userService.updateUser(user.id, {
+      hasVerifiedPhone: true,
+    });
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Successfully verified phone number',
+      data: uodatedUser,
     };
   }
 
@@ -71,25 +164,19 @@ export class AuthService {
    * @returns A promise of a promise of a RequestResponse<LoginResponse>
    */
   async login(body: LoginDto) {
-    const { phone, email, password } = body;
-    if (!phone && !email) {
-      throw new BadRequestException('Please enter valid phone or email');
-    }
+    const { phone, password } = body;
 
-    const userInDb = await this.userService.findUserbyPhoneOrEmail(
-      phone,
-      email,
-    );
+    const userInDb = await this.userService.findUserbyPhone(phone);
     if (!userInDb) throw new NotFoundException(`User not found`);
 
-    if (!bcrypt.compare(password, userInDb.password))
-      throw new BadRequestException(`Invalid password`);
+    const passwordsMatch = await bcrypt.compare(password, userInDb.password);
+    if (!passwordsMatch) throw new BadRequestException(`Invalid password`);
 
     const { accessToken, refreshToken } =
       await this.tokenService.handleCreateTokens(userInDb.id);
 
     return {
-      statusCode: HttpStatus.CREATED,
+      statusCode: HttpStatus.OK,
       message: 'Login successful',
       data: {
         user: userInDb,
@@ -110,7 +197,7 @@ export class AuthService {
     const { accessToken, refreshToken } =
       await this.tokenService.handleCreateTokens(userId);
     return {
-      status: HttpStatus.CREATED,
+      status: HttpStatus.OK,
       message: 'success',
       data: {
         accessToken,

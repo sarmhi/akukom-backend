@@ -5,6 +5,7 @@ import { UserModule } from 'src/user/user.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TokenService } from './token.service';
+import { CommonModule } from 'src/common/common.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TokenService } from './token.service';
     }),
     ConfigModule,
     UserModule,
+    CommonModule,
   ],
   providers: [AuthService, TokenService],
   controllers: [AuthController],

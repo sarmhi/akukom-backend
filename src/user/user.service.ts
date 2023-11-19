@@ -14,7 +14,19 @@ export class UserService {
     });
   }
 
+  async findUserbyEmail(email: string) {
+    return this.userRepo.findOne({ email: email });
+  }
+
+  async findUserbyPhone(phone: string) {
+    return this.userRepo.findOne({ phone: phone });
+  }
+
   async createUser(user: Partial<IUser>) {
-    await this.userRepo.create(user);
+    return await this.userRepo.create(user);
+  }
+
+  async updateUser(id: string, user: Partial<IUser>) {
+    return await this.userRepo.findOneAndUpDate({ _id: id }, { ...user });
   }
 }

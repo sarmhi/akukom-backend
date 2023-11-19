@@ -1,7 +1,6 @@
 import {
   IsEmail,
   IsNotEmpty,
-  IsOptional,
   IsPhoneNumber,
   IsString,
   MinLength,
@@ -23,18 +22,10 @@ export class UserSignUpDto {
   @MinLength(2)
   lastName: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsEmail()
   @IsString()
   email: string;
-
-  @IsPhoneNumber()
-  @IsOptional()
-  phone: string;
-
-  @IsString()
-  @IsNotEmpty()
-  username: string;
 
   @IsString()
   @IsNotEmpty()
@@ -45,8 +36,20 @@ export class UserSignUpDto {
   @IsNotEmpty()
   @MinLength(6)
   confirmPassword: string;
+}
 
-  @IsOptional()
+export class CompleteSignupDto {
+  @IsPhoneNumber()
+  @IsNotEmpty()
+  phone: string;
+
+  @IsNotEmpty()
   @IsString()
-  address?: string;
+  country: string;
+}
+
+export class VerifyPhoneNumberDto {
+  @IsString()
+  @IsNotEmpty()
+  code: string;
 }

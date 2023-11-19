@@ -7,6 +7,7 @@ import {
   IsOptional,
   Matches,
   IsEmail,
+  IsBoolean,
 } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
 import * as mongoosePaginate from 'mongoose-paginate-v2';
@@ -26,45 +27,25 @@ export type UserDocument = HydratedDocument<User>;
   },
 })
 export class User {
-  @Prop({ type: String, required: true, lowercase: true })
-  @IsNotEmpty()
+  @Prop({ type: String, lowercase: true })
+  @IsOptional()
   @IsString()
   @ApiProperty({
     type: String,
     example: 'John',
     description: 'first name of user',
   })
-  firstName: string;
+  firstName?: string;
 
-  @Prop({ type: String, required: true })
-  @IsNotEmpty()
+  @Prop({ type: String, lowercase: true })
+  @IsOptional()
   @IsString()
   @ApiProperty({
     type: String,
     example: 'Micheal',
     description: 'Last name of user',
   })
-  lastName: string;
-
-  @Prop({ type: String, unique: true })
-  @IsOptional()
-  @IsString()
-  @ApiProperty({
-    type: String,
-    example: 'Micchy',
-    description: 'Username of user',
-  })
-  userName?: string;
-
-  @Prop({ type: String })
-  @IsOptional()
-  @IsString()
-  @ApiProperty({
-    type: String,
-    example: '15, Ajegunle Road, Ogbomosho, Lagos',
-    description: 'address of user',
-  })
-  address?: string;
+  lastName?: string;
 
   @Prop({ type: String, unique: true })
   @IsOptional()
@@ -81,16 +62,39 @@ export class User {
   @ApiProperty({ type: String, example: '+639171234567' })
   phone: string;
 
+  @Prop({ type: Boolean, default: false })
+  @IsNotEmpty()
+  @IsBoolean()
+  hasVerifiedPhone: boolean;
+
   @Prop({ type: String })
   @IsNotEmpty()
   @IsString()
   @MinLength(5)
   @ApiProperty({
     type: String,
-    minLength: 5,
+    minLength: 8,
     description: 'User password',
   })
   password: string;
+
+  @Prop({ type: String })
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    description: 'Users Country of Residence',
+  })
+  country?: string;
+
+  @Prop({ type: String })
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    description: 'Users tribe',
+  })
+  tribe?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
