@@ -19,6 +19,11 @@ import { LoginDto } from './dtos/login.dto';
 import * as bcrypt from 'bcryptjs';
 import { TokenService } from './token.service';
 import { JwtService } from '@nestjs/jwt';
+import {
+  ChangeUserPasswordDto,
+  ProcessForgetPasswordOtpDto,
+  ProcessForgetPasswordOtpVerificationDto,
+} from './dtos/account-recovery.dto';
 
 @Injectable()
 export class AuthService {
@@ -40,7 +45,7 @@ export class AuthService {
     const { email, confirmPassword, password } = body;
 
     if (confirmPassword !== password)
-      throw new ForbiddenException(
+      throw new BadRequestException(
         'Password and confirmPassword fields must match',
       );
 
@@ -120,6 +125,7 @@ export class AuthService {
     const updatedUserInDb = await this.userService.updateUser(user.id, {
       ...body,
     });
+
     if (!updatedUserInDb)
       throw new InternalServerErrorException('Something went wrong');
 
@@ -131,9 +137,8 @@ export class AuthService {
   }
 
   /**
-   *
+   * @param body VerifyPhoneNumberDto
    * @param user authenticated user
-   * @param phone authenticated user
    * @returns Promise of a successful signup
    */
   async verifyPhoneNumber(
@@ -153,6 +158,70 @@ export class AuthService {
       statusCode: HttpStatus.OK,
       message: 'Successfully verified phone number',
       data: updatedUserInDb,
+    };
+  }
+
+  /**
+   *
+   * @param body ProcessForgetPasswordOtpDto
+   * @returns Promise of a successful signup
+   */
+  async processForgetPasswordOtp(
+    body: ProcessForgetPasswordOtpDto,
+  ): Promise<IResponse<any>> {
+    const { email } = body;
+    const foundUserInDb = await this.userService.findUserbyEmail(email);
+    if (!foundUserInDb)
+      throw new NotFoundException(`User with email:${email} not found)`);
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Successfully sent otp ',
+    };
+  }
+
+  /**
+   * @param body ProcessForgetPasswordOtpVerificationDto
+   * @returns Promise of a successful signup
+   */
+  async processForgetPasswordOtpVerification(
+    body: ProcessForgetPasswordOtpVerificationDto,
+  ): Promise<IResponse<any>> {
+    const { email, code } = body;
+    const foundUserInDb = await this.userService.findUserbyEmail(email);
+    if (!foundUserInDb)
+      throw new NotFoundException(`User with email:${email} not found)`);
+
+    if (code !== '1234')
+      throw new BadRequestException('Invalid verification code');
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Successfully verified otp',
+    };
+  }
+
+  /**
+   * @param body ChangeUserPasswordDto
+   * @returns Promise of a successful signup
+   */
+  async changeUserPassword(
+    body: ChangeUserPasswordDto,
+  ): Promise<IResponse<any>> {
+    const { email, confirmNewPassword, newPassword } = body;
+    if (confirmNewPassword !== newPassword)
+      throw new BadRequestException(
+        'Password and confirmPassword fields must match',
+      );
+    const foundUserInDb = await this.userService.findUserbyEmail(email);
+    if (!foundUserInDb)
+      throw new NotFoundException(`User with email:${email} not found)`);
+    foundUserInDb.password = newPassword;
+    await foundUserInDb.save();
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Successfully changed user password',
     };
   }
 

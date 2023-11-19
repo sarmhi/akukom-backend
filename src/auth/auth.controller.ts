@@ -16,6 +16,11 @@ import {
 } from './dtos/signup.dto';
 import { AuthenticatedUser, IUser, JwtUserAuthGuard } from 'src/common';
 import { LoginDto } from './dtos/login.dto';
+import {
+  ChangeUserPasswordDto,
+  ProcessForgetPasswordOtpDto,
+  ProcessForgetPasswordOtpVerificationDto,
+} from './dtos/account-recovery.dto';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
@@ -70,6 +75,30 @@ export class AuthController {
     @AuthenticatedUser() user: IUser,
   ) {
     return this.authService.verifyPhoneNumber(body, user);
+  }
+
+  @Post('process/forgot-password-otp')
+  @ApiOperation({ summary: `Initiates the otp token to reset the password` })
+  async processForgetPasswordOtp(@Body() body: ProcessForgetPasswordOtpDto) {
+    return this.authService.processForgetPasswordOtp(body);
+  }
+
+  @Post('process/forgot-password-otp-verification')
+  @ApiOperation({
+    summary: `Verifies the token sent to users email and changes password`,
+  })
+  async processForgetPasswordOtpVerification(
+    @Body() body: ProcessForgetPasswordOtpVerificationDto,
+  ) {
+    return this.authService.processForgetPasswordOtpVerification(body);
+  }
+
+  @Post('process/change-password')
+  @ApiOperation({
+    summary: `Changes users password after otp verification`,
+  })
+  async changeUserPassword(@Body() body: ChangeUserPasswordDto) {
+    return this.authService.changeUserPassword(body);
   }
 
   @Post('process/refresh-token')
