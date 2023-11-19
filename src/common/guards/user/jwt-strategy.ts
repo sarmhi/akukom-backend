@@ -24,9 +24,9 @@ export class JwtUserPassportStrategy extends PassportStrategy(
 
   async validate(payload: any) {
     this.logger.debug('fetching user from DB');
-    const user = await this.userRepo.findOne({ id: payload.id });
+    const user = await this.userRepo.findOne({ _id: payload.userId });
     if (!user) throw new UnauthorizedException();
-    this.logger.debug(`Validated user with id ${payload.id}`);
+    this.logger.debug(`Validated user with id ${payload.userId}`);
     return user;
   }
 }

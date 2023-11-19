@@ -47,20 +47,20 @@ export class User {
   })
   lastName?: string;
 
-  @Prop({ type: String, unique: true })
+  @Prop({ type: String, unique: true, sparse: true })
   @IsOptional()
   @IsEmail()
   @IsString()
   @ApiProperty({ type: String, example: 'test@yahoo.com' })
-  email: string;
+  email?: string;
 
-  @Prop({ unique: true })
+  @Prop({ unique: true, sparse: true })
   @IsOptional()
   @Matches(/^\+[1-9]\d{1,14}$/, {
     message: 'Phone number must be valid with + sign',
   })
   @ApiProperty({ type: String, example: '+639171234567' })
-  phone: string;
+  phone?: string;
 
   @Prop({ type: Boolean, default: false })
   @IsNotEmpty()

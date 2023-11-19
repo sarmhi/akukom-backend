@@ -233,9 +233,15 @@ export class AuthService {
    * @returns A promise of a promise of a RequestResponse<LoginResponse>
    */
   async login(body: LoginDto) {
-    const { phone, password } = body;
+    const { phone, email, password } = body;
+    if (!phone && !email) {
+      throw new BadRequestException('Please enter valid phone or email');
+    }
 
-    const userInDb = await this.userService.findUserbyPhone(phone);
+    const userInDb = await this.userService.findUserbyPhoneOrEmail(
+      phone,
+      email,
+    );
     if (!userInDb) throw new NotFoundException(`User not found`);
 
     const passwordsMatch = await bcrypt.compare(password, userInDb.password);

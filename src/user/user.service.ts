@@ -9,9 +9,18 @@ export class UserService {
   constructor(private readonly userRepo: UserRepository) {}
 
   async findUserbyPhoneOrEmail(phone: string, email: string) {
-    return this.userRepo.findOne({
-      $or: [{ phone: phone }, { email: email }],
-    });
+    const query: any = {};
+
+    if (phone) {
+      query.$or = [{ phone }];
+    }
+
+    if (email) {
+      query.$or = query.$or || [];
+      query.$or.push({ email });
+    }
+
+    return this.userRepo.findOne(query);
   }
 
   async findUserbyEmail(email: string) {
