@@ -4,3 +4,9 @@ import { User } from 'src/user/models/user.model';
 export interface IUser extends User {
   id?: any;
 }
+
+export enum Status {
+  ACTIVE = 'ACTIVE',
+  DEACTIVATED = 'DEACTIVATED',
+  SUSPENDED = 'SUSPENDED',
+}

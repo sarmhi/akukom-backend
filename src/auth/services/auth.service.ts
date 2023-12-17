@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpStatus,
   Injectable,
@@ -12,10 +13,10 @@ import {
   CompleteSignupDto,
   UserSignUpDto,
   VerifyPhoneNumberDto,
-} from './dtos/signup.dto';
-import { IResponse, IUser } from 'src/common';
+} from '../dtos/signup.dto';
+import { IResponse, IUser, ResponseMessage } from 'src/common';
 import { UserService } from 'src/user/user.service';
-import { LoginDto } from './dtos/login.dto';
+import { LoginDto } from '../dtos/login.dto';
 import * as bcrypt from 'bcryptjs';
 import { TokenService } from './token.service';
 import { JwtService } from '@nestjs/jwt';
@@ -23,7 +24,8 @@ import {
   ChangeUserPasswordDto,
   ProcessForgetPasswordOtpDto,
   ProcessForgetPasswordOtpVerificationDto,
-} from './dtos/account-recovery.dto';
+} from '../dtos/account-recovery.dto';
+import { CheckEmailUsageDto } from '../dtos';
 
 @Injectable()
 export class AuthService {
@@ -222,6 +224,23 @@ export class AuthService {
     return {
       statusCode: HttpStatus.OK,
       message: 'Successfully changed user password',
+    };
+  }
+
+  async checkEmailUsage(body: CheckEmailUsageDto) {
+    const { email } = body;
+    const foundAccountUsingEmail = await this.userService.findUserbyEmail(
+      email,
+    );
+    if (foundAccountUsingEmail)
+      throw new ConflictException(
+        `User with email ${foundAccountUsingEmail.email} already exists`,
+      );
+
+    return {
+      message: ResponseMessage.EMAIL_NOT_FOUND,
+      success: true,
+      statusCode: HttpStatus.OK,
     };
   }
 

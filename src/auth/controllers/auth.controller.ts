@@ -8,19 +8,20 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
+import { AuthService } from '../services/auth.service';
 import {
   CompleteSignupDto,
   UserSignUpDto,
   VerifyPhoneNumberDto,
-} from './dtos/signup.dto';
+} from '../dtos/signup.dto';
 import { AuthenticatedUser, IUser, JwtUserAuthGuard } from 'src/common';
-import { LoginDto } from './dtos/login.dto';
+import { LoginDto } from '../dtos/login.dto';
 import {
   ChangeUserPasswordDto,
   ProcessForgetPasswordOtpDto,
   ProcessForgetPasswordOtpVerificationDto,
-} from './dtos/account-recovery.dto';
+} from '../dtos/account-recovery.dto';
+import { CheckEmailUsageDto } from '../dtos';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
@@ -105,5 +106,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh token on access token expiration' })
   async handleRefreshToken(@Query('token') token: string) {
     return this.authService.refreshToken(token);
+  }
+
+  @Get('process/check-email-usage')
+  @ApiOperation({
+    summary: `Used to check if an email is already in use`,
+  })
+  async checkEmailUsage(@Body() body: CheckEmailUsageDto) {
+    return this.authService.checkEmailUsage(body);
   }
 }

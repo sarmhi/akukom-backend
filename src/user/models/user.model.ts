@@ -8,10 +8,12 @@ import {
   Matches,
   IsEmail,
   IsBoolean,
+  IsEnum,
 } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
 import * as mongoosePaginate from 'mongoose-paginate-v2';
 import * as bcrypt from 'bcryptjs';
+import { Status } from 'src/common';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -54,6 +56,11 @@ export class User {
   @ApiProperty({ type: String, example: 'test@yahoo.com' })
   email?: string;
 
+  @Prop({ type: Boolean, default: false })
+  @IsNotEmpty()
+  @IsBoolean()
+  hasVerifiedEmail: boolean;
+
   @Prop({ unique: true, sparse: true })
   @IsOptional()
   @Matches(/^\+[1-9]\d{1,14}$/, {
@@ -95,6 +102,15 @@ export class User {
     description: 'Users tribe',
   })
   tribe?: string;
+
+  @Prop({ type: String, default: Status.ACTIVE })
+  @IsNotEmpty()
+  @IsEnum(Status)
+  @ApiProperty({
+    type: Status,
+    description: 'Account status',
+  })
+  status: Status;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
