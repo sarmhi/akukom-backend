@@ -50,7 +50,7 @@ export class CompleteSignupDto {
 
   @IsOptional()
   @IsString()
-  tribe: string;
+  tribe?: string;
 }
 
 export class VerifyPhoneNumberDto {
