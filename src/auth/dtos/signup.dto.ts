@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsPhoneNumber,
   IsString,
   MinLength,
@@ -47,7 +48,7 @@ export class CompleteSignupDto {
   @IsString()
   country: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   tribe: string;
 }
