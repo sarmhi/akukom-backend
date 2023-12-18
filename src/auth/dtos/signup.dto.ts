@@ -46,6 +46,10 @@ export class CompleteSignupDto {
   @IsNotEmpty()
   @IsString()
   country: string;
+
+  @IsNotEmpty()
+  @IsString()
+  tribe: string;
 }
 
 export class VerifyPhoneNumberDto {
