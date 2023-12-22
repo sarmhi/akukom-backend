@@ -7,16 +7,26 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { IUser, ResponseMessage, Status } from 'src/common';
-import { UserService } from 'src/user/user.service';
+import {
+  FileService,
+  FindManyDto,
+  IUser,
+  ResponseMessage,
+  Status,
+} from 'src/common';
 import { ChangePasswordDto, EditProfileDto } from '../dtos';
 import * as bcrypt from 'bcryptjs';
+import { UserRepository, UserService } from 'src/user';
 
 @Injectable()
 export class ProfileService {
   private logger: Logger = new Logger(ProfileService.name);
 
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly userRepo: UserRepository,
+    private readonly fileService: FileService,
+  ) {}
 
   async deactivateAccount(user: IUser) {
     const foundUserInDb = await this.userService.findUserById(user.id);
@@ -117,6 +127,60 @@ export class ProfileService {
       success: true,
       statusCode: HttpStatus.OK,
       data: updatedUserInDb,
+    };
+  }
+
+  async editProfileImage(file: Express.Multer.File, user: IUser) {
+    const foundUserInDb = await this.userService.findUserById(user.id);
+    if (!foundUserInDb)
+      throw new NotFoundException(`User with id ${user.id} not found`);
+    if (foundUserInDb.image) {
+      const deleted = await this.fileService.deletePublicFile(
+        foundUserInDb.imageKey,
+      );
+      if (deleted) {
+        foundUserInDb.image = null;
+        foundUserInDb.imageKey = null;
+      }
+    }
+    const { url, key } = await this.fileService.uploadPublicFile(
+      file.buffer,
+      `profile-image-${file.originalname}`,
+      file.mimetype,
+    );
+    foundUserInDb.image = url;
+    foundUserInDb.imageKey = key;
+    await foundUserInDb.save();
+
+    return {
+      message: ResponseMessage.REQUEST_SUCCESSFUL,
+      success: true,
+      statusCode: HttpStatus.OK,
+      data: foundUserInDb,
+    };
+  }
+
+  async getUsers(query: FindManyDto) {
+    const { search } = query;
+    const condition = {};
+    if (search) {
+      condition['$or'] = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const foundUsersInDb = await this.userRepo.findManyWithPagination(
+      condition,
+      query,
+    );
+
+    return {
+      message: ResponseMessage.REQUEST_SUCCESSFUL,
+      success: true,
+      statusCode: HttpStatus.OK,
+      data: foundUsersInDb,
     };
   }
 
