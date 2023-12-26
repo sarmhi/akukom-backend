@@ -15,7 +15,7 @@ import * as mongoosePaginate from 'mongoose-paginate-v2';
 import * as bcrypt from 'bcryptjs';
 import { Status } from 'src/common';
 import { Collections } from 'src/collections';
-import { Family } from 'src/family';
+import { FamilyDocument } from 'src/family';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -133,6 +133,7 @@ export class User {
   status: Status;
 
   @Prop({
+    default: [],
     type: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -140,7 +141,7 @@ export class User {
       },
     ],
   })
-  family?: (string | ObjectId | Family)[];
+  family?: (string | ObjectId | FamilyDocument)[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -80,13 +80,12 @@ export class FileService {
     this.logger.debug(`deleting public file: ${key}`);
     try {
       const fileExists = await this.checkFileExists(key);
-      console.log({ fileExists });
       if (!fileExists) return;
       const file = this.bucket.file(key);
       await file.delete();
       return true;
     } catch (err) {
-      this.logger.log('Error deleting file:', err);
+      this.logger.error('Error deleting file:', err);
       throw new InternalServerErrorException(
         'An error occurred while deleting the file',
       );
@@ -98,11 +97,9 @@ export class FileService {
     try {
       const file = this.bucket.file(key);
       const exists = await file.exists();
-      console.log({ exists });
       return exists[0];
     } catch (error) {
       this.logger.error('Error checking file existence:', error);
-      console.log({ message: error.message });
       if (error.message.includes('No such object:')) return false;
       throw new InternalServerErrorException(
         'An error occurred while checking the file existence',

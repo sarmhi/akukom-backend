@@ -17,10 +17,11 @@ import {
   ApiConsumes,
 } from '@nestjs/swagger';
 import { ProfileService } from '../services';
-import { AuthenticatedUser, FindManyDto, IUser } from 'src/common';
+import { AuthenticatedUser, FindManyDto } from 'src/common';
 import { ChangePasswordDto, EditProfileDto } from '../dtos';
 import { JwtUserAuthGuard } from 'src/common/guards/user/jwt.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UserDocument } from 'src/user';
 
 @ApiTags('Profile')
 @ApiBearerAuth()
@@ -38,7 +39,7 @@ export class ProfileController {
   @ApiOperation({
     summary: `Deactivates a user's account`,
   })
-  async deactivateAccount(@AuthenticatedUser() user: IUser) {
+  async deactivateAccount(@AuthenticatedUser() user: UserDocument) {
     return this.profileService.deactivateAccount(user);
   }
 
@@ -46,7 +47,7 @@ export class ProfileController {
   @ApiOperation({
     summary: `Deletes a user's account`,
   })
-  async deleteAccount(@AuthenticatedUser() user: IUser) {
+  async deleteAccount(@AuthenticatedUser() user: UserDocument) {
     return this.profileService.deleteAccount(user);
   }
 
@@ -56,7 +57,7 @@ export class ProfileController {
   })
   async changePassword(
     @Body() body: ChangePasswordDto,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
   ) {
     return this.profileService.changePassword(body, user);
   }
@@ -67,7 +68,7 @@ export class ProfileController {
   })
   async editProfile(
     @Body() body: EditProfileDto,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
   ) {
     return this.profileService.editProfile(body, user);
   }
@@ -109,7 +110,7 @@ export class ProfileController {
   })
   @ApiConsumes('multipart/form-data')
   async editProfileImage(
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.profileService.editProfileImage(file, user);

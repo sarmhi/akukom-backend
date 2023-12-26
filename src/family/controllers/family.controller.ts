@@ -6,6 +6,7 @@ import {
   Logger,
   Param,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -19,12 +20,15 @@ import {
 import { JwtUserAuthGuard } from 'src/common/guards/user/jwt.guard';
 import { FamilyService } from '../services';
 import {
+  AcceptPendingRequest,
   AddFamilyMembers,
   CreateFamilyDto,
   EditFamilyDto,
+  GetFamilyList,
 } from '../dtos/family.dto';
-import { AuthenticatedUser, IUser } from 'src/common';
+import { AuthenticatedUser, FindManyDto } from 'src/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UserDocument } from 'src/user';
 
 @ApiTags('Family')
 @ApiBearerAuth()
@@ -65,7 +69,7 @@ export class FamilyController {
   @ApiConsumes('multipart/form-data', 'json')
   async createFamily(
     @Body() body: CreateFamilyDto,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.familyService.createFamily(body, user, file);
@@ -78,7 +82,7 @@ export class FamilyController {
   async checkUserInFamily(
     @Param('userId') userId: string,
     @Param('familyId') familyId: string,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
   ) {
     return this.familyService.checkUserInFamily(userId, familyId, user);
   }
@@ -110,7 +114,7 @@ export class FamilyController {
   @ApiConsumes('multipart/form-data', 'json')
   async editFamilyDetails(
     @Body() body: EditFamilyDto,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.familyService.editFamilyDetails(body, user, file);
@@ -122,16 +126,75 @@ export class FamilyController {
   })
   async addFamilyMembers(
     @Body() body: AddFamilyMembers,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
   ) {
     return this.familyService.addFamilyMembers(body, user);
   }
 
-  @Get('list-pending-family-invitations')
+  @Get('list-pending-requests')
   @ApiOperation({
-    summary: `Used to get a user's pending invitations to a family`,
+    summary: `Used to get a user's pending requests`,
+    description: `It gets both the requests of users wishing to join a faimly youre an admin of(youre the creator and youd 
+      find the users in the 'pendingUserRequests' field) as well as request of family wishing to add you to the family(Your id would be in
+      the 'pendingFamilyInvitations' field)`,
   })
-  async getPendingFamilyInvitations(@AuthenticatedUser() user: IUser) {
-    return this.familyService.getPendingFamilyInvitations(user);
+  async getPendingRequests(@AuthenticatedUser() user: UserDocument) {
+    return this.familyService.getPendingRequests(user);
+  }
+
+  @Get('get-family-list-user-can-join')
+  @ApiOperation({
+    summary: `Used to search for family a logged in user can join`,
+    description: `search field is required.`,
+  })
+  async getListOfFamilyUserCanJoin(query: FindManyDto) {
+    return this.familyService.getListOfFamilyUserCanJoin(query);
+  }
+
+  @Get('get-family-members')
+  @ApiOperation({ summary: `get a list of members in a users family` })
+  async getFamilyMembers(
+    @Query() query: GetFamilyList,
+    @AuthenticatedUser() user: UserDocument,
+  ) {
+    return this.familyService.getFamilyMembers(query, user);
+  }
+
+  @Get('get-family-details/:id')
+  @ApiOperation({ summary: `Used to retrieve a family details` })
+  async getFamilyDetails(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: UserDocument,
+  ) {
+    return this.familyService.getFamilyDetails(id, user);
+  }
+
+  @Get('request-to-join-family/:familyId')
+  @ApiOperation({ summary: `Used to send a request to join a family` })
+  async requestToJoinFamily(
+    @Param('familyId') familyId: string,
+    @AuthenticatedUser() user: UserDocument,
+  ) {
+    return this.familyService.requestToJoinFamily(familyId, user);
+  }
+
+  @Post('accept-pending-requests')
+  @ApiOperation({ summary: `Used to accept or decline a pending request` })
+  async acceptPendingRequests(
+    @Body() body: AcceptPendingRequest,
+    @AuthenticatedUser() user: UserDocument,
+  ) {
+    return this.familyService.acceptPendingRequests(body, user);
+  }
+
+  @Get('get-users-family')
+  @ApiOperation({
+    summary: `Used to get a list of families a logged in user has`,
+  })
+  async getUsersFamily(
+    query: FindManyDto,
+    @AuthenticatedUser() user: UserDocument,
+  ) {
+    return this.familyService.getUsersFamily(query, user);
   }
 }

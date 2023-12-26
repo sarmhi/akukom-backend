@@ -5,7 +5,7 @@ import { UserModule } from 'src/user/user.module';
 import { CommonModule } from 'src/common/common.module';
 import { familyModuleCollections } from './config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { FamilyRepository } from './repository';
+import { FamilyRepository, RequestRepository } from './repository';
 
 @Module({
   imports: [
@@ -14,7 +14,7 @@ import { FamilyRepository } from './repository';
     UserModule,
   ],
   controllers: [FamilyController],
-  providers: [FamilyService, FamilyRepository],
-  exports: [FamilyService, FamilyRepository],
+  providers: [FamilyService, FamilyRepository, RequestRepository],
+  exports: [FamilyService, FamilyRepository, RequestRepository],
 })
 export class FamilyModule {}

@@ -5,18 +5,11 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
-import {
-  FileService,
-  FindManyDto,
-  IUser,
-  ResponseMessage,
-  Status,
-} from 'src/common';
+import { FileService, FindManyDto, ResponseMessage, Status } from 'src/common';
 import { ChangePasswordDto, EditProfileDto } from '../dtos';
 import * as bcrypt from 'bcryptjs';
-import { UserRepository, UserService } from 'src/user';
+import { UserDocument, UserRepository, UserService } from 'src/user';
 
 @Injectable()
 export class ProfileService {
@@ -28,14 +21,10 @@ export class ProfileService {
     private readonly fileService: FileService,
   ) {}
 
-  async deactivateAccount(user: IUser) {
-    const foundUserInDb = await this.userService.findUserById(user.id);
-    if (!foundUserInDb)
-      throw new NotFoundException(`User with id ${user.id} not found`);
+  async deactivateAccount(user: UserDocument) {
+    user.status = Status.DEACTIVATED;
 
-    foundUserInDb.status = Status.DEACTIVATED;
-
-    const updatedUserInDb = await foundUserInDb.save();
+    const updatedUserInDb = await user.save();
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
@@ -45,14 +34,10 @@ export class ProfileService {
     };
   }
 
-  async deleteAccount(user: IUser) {
-    const foundUserInDb = await this.userService.findUserById(user.id);
-    if (!foundUserInDb)
-      throw new NotFoundException(`User with id ${user.id} not found`);
+  async deleteAccount(user: UserDocument) {
+    // Todo: Remove all content belonging to this user from our database
 
-    // Todo: Remove all contemt belonging to this user from our database
-
-    await foundUserInDb.deleteOne();
+    await user.deleteOne();
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
@@ -61,20 +46,14 @@ export class ProfileService {
     };
   }
 
-  async changePassword(body: ChangePasswordDto, user: IUser) {
+  async changePassword(body: ChangePasswordDto, user: UserDocument) {
     const { currentPassword, newPassword } = body;
-    const foundUserInDb = await this.userService.findUserById(user.id);
-    if (!foundUserInDb)
-      throw new NotFoundException(`User with id ${user.id} not found`);
 
-    const isMatch = await this.checkPassword(
-      currentPassword,
-      foundUserInDb.password,
-    );
+    const isMatch = await this.checkPassword(currentPassword, user.password);
     if (!isMatch) throw new BadRequestException('Old password is incorrect');
-    foundUserInDb.password = newPassword;
+    user.password = newPassword;
 
-    await foundUserInDb.save();
+    await user.save();
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
@@ -83,11 +62,8 @@ export class ProfileService {
     };
   }
 
-  async editProfile(body: EditProfileDto, user: IUser) {
+  async editProfile(body: EditProfileDto, user: UserDocument) {
     const { country, email, phone } = body;
-    const foundUserInDb = await this.userService.findUserById(user.id);
-    if (!foundUserInDb)
-      throw new NotFoundException(`User with id ${user.id} not found`);
 
     if (email) {
       const foundAccountUsingEmail = await this.userService.findUserbyEmail(
@@ -98,8 +74,8 @@ export class ProfileService {
           `User with email ${foundAccountUsingEmail.email} already exists`,
         );
 
-      foundUserInDb.email = email;
-      foundUserInDb.hasVerifiedEmail = false;
+      user.email = email;
+      user.hasVerifiedEmail = false;
     }
 
     if (phone) {
@@ -112,15 +88,15 @@ export class ProfileService {
           'Phone number is already in use by another user.',
         );
 
-      foundUserInDb.phone = phone;
-      foundUserInDb.hasVerifiedPhone = false;
+      user.phone = phone;
+      user.hasVerifiedPhone = false;
     }
 
     if (country) {
-      foundUserInDb.country = country;
+      user.country = country;
     }
 
-    const updatedUserInDb = await foundUserInDb.save();
+    const updatedUserInDb = await user.save();
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
@@ -130,17 +106,12 @@ export class ProfileService {
     };
   }
 
-  async editProfileImage(file: Express.Multer.File, user: IUser) {
-    const foundUserInDb = await this.userService.findUserById(user.id);
-    if (!foundUserInDb)
-      throw new NotFoundException(`User with id ${user.id} not found`);
-    if (foundUserInDb.image) {
-      const deleted = await this.fileService.deletePublicFile(
-        foundUserInDb.imageKey,
-      );
+  async editProfileImage(file: Express.Multer.File, user: UserDocument) {
+    if (user.image) {
+      const deleted = await this.fileService.deletePublicFile(user.imageKey);
       if (deleted) {
-        foundUserInDb.image = null;
-        foundUserInDb.imageKey = null;
+        user.image = null;
+        user.imageKey = null;
       }
     }
     const { url, key } = await this.fileService.uploadPublicFile(
@@ -148,15 +119,15 @@ export class ProfileService {
       `profile-image-${file.originalname}`,
       file.mimetype,
     );
-    foundUserInDb.image = url;
-    foundUserInDb.imageKey = key;
-    await foundUserInDb.save();
+    user.image = url;
+    user.imageKey = key;
+    const updatedUserInDb = await user.save();
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
       success: true,
       statusCode: HttpStatus.OK,
-      data: foundUserInDb,
+      data: updatedUserInDb,
     };
   }
 

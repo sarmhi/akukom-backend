@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoosePaginate from 'mongoose-paginate-v2';
-import { User } from '../../user/models/user.model';
+import { UserDocument } from '../../user/models/user.model';
 import mongoose, { HydratedDocument, ObjectId } from 'mongoose';
 import { Collections } from 'src/collections';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
@@ -63,29 +63,21 @@ export class Family {
     type: mongoose.Schema.Types.ObjectId,
     ref: Collections.users,
   })
-  creator: User;
+  creator: UserDocument;
 
   @Prop({
+    default: [],
     type: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: Collections.family,
+        ref: Collections.request,
       },
     ],
   })
-  pendingUserRequests?: (string | ObjectId | User)[];
+  pendingRequests?: (string | ObjectId | Request)[] = [];
 
   @Prop({
-    type: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: Collections.family,
-      },
-    ],
-  })
-  pendingFamilyInvitations?: (string | ObjectId | User)[];
-
-  @Prop({
+    default: [],
     type: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -93,7 +85,7 @@ export class Family {
       },
     ],
   })
-  members: (string | ObjectId | User)[];
+  members: (string | ObjectId | UserDocument)[] = [];
 }
 
 export const FamilySchema = SchemaFactory.createForClass(Family);

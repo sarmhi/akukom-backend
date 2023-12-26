@@ -65,13 +65,12 @@ export class S3BucketService {
     });
     try {
       const data = await this.s3Client.send(command);
-      console.log('Success, s3 object deleted', data);
+      this.logger.log('Success, s3 object deleted', data);
     } catch (err) {
-      console.log('Error', err);
+      this.logger.error('Error', err);
     }
   }
 
-  // check if file exists in bucket
   async checkFileExists(key: string) {
     try {
       const headObjectParams = {

@@ -1,12 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMinSize,
+  IsBoolean,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
 import { ObjectId } from 'mongoose';
+import { Transform } from 'class-transformer';
 
 export class CreateFamilyDto {
   @IsNotEmpty()
@@ -35,6 +37,7 @@ export class EditFamilyDto {
 
   @IsMongoId()
   @IsString()
+  @IsNotEmpty()
   familyId: string;
 }
 
@@ -46,4 +49,27 @@ export class AddFamilyMembers {
   @IsMongoId()
   @IsString()
   familyId: string;
+}
+
+export class GetFamilyList {
+  @IsMongoId()
+  @IsString()
+  @IsNotEmpty()
+  familyId: string;
+}
+
+export class AcceptPendingRequest {
+  @IsBoolean()
+  @IsNotEmpty()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return false;
+  })
+  accepted: boolean;
+
+  @IsMongoId()
+  @IsString()
+  @IsNotEmpty()
+  requestId: string;
 }
