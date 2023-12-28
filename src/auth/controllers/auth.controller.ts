@@ -14,7 +14,7 @@ import {
   UserSignUpDto,
   VerifyPhoneNumberDto,
 } from '../dtos/signup.dto';
-import { AuthenticatedUser, IUser, JwtUserAuthGuard } from 'src/common';
+import { AuthenticatedUser, IUser } from 'src/common';
 import { LoginDto } from '../dtos/login.dto';
 import {
   ChangeUserPasswordDto,
@@ -22,6 +22,7 @@ import {
   ProcessForgetPasswordOtpVerificationDto,
 } from '../dtos/account-recovery.dto';
 import { CheckEmailUsageDto } from '../dtos';
+import { JwtUserAuthGuard } from 'src/common/guards/user/jwt.guard';
 
 @ApiTags('Auth')
 @ApiBearerAuth()

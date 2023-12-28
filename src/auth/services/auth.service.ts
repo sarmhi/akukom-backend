@@ -15,17 +15,17 @@ import {
   VerifyPhoneNumberDto,
 } from '../dtos/signup.dto';
 import { IResponse, IUser, ResponseMessage } from 'src/common';
-import { UserService } from 'src/user/user.service';
 import { LoginDto } from '../dtos/login.dto';
 import * as bcrypt from 'bcryptjs';
-import { TokenService } from './token.service';
 import { JwtService } from '@nestjs/jwt';
 import {
   ChangeUserPasswordDto,
+  CheckEmailUsageDto,
   ProcessForgetPasswordOtpDto,
   ProcessForgetPasswordOtpVerificationDto,
-} from '../dtos/account-recovery.dto';
-import { CheckEmailUsageDto } from '../dtos';
+} from '../dtos';
+import { UserService } from 'src/user';
+import { TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {

@@ -1,8 +1,27 @@
-import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Logger,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBody,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { ProfileService } from '../services';
-import { AuthenticatedUser, IUser, JwtUserAuthGuard } from 'src/common';
+import { AuthenticatedUser, FindManyDto } from 'src/common';
 import { ChangePasswordDto, EditProfileDto } from '../dtos';
+import { JwtUserAuthGuard } from 'src/common/guards/user/jwt.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UserDocument } from 'src/user';
 
 @ApiTags('Profile')
 @ApiBearerAuth()
@@ -20,7 +39,7 @@ export class ProfileController {
   @ApiOperation({
     summary: `Deactivates a user's account`,
   })
-  async deactivateAccount(@AuthenticatedUser() user: IUser) {
+  async deactivateAccount(@AuthenticatedUser() user: UserDocument) {
     return this.profileService.deactivateAccount(user);
   }
 
@@ -28,7 +47,7 @@ export class ProfileController {
   @ApiOperation({
     summary: `Deletes a user's account`,
   })
-  async deleteAccount(@AuthenticatedUser() user: IUser) {
+  async deleteAccount(@AuthenticatedUser() user: UserDocument) {
     return this.profileService.deleteAccount(user);
   }
 
@@ -38,7 +57,7 @@ export class ProfileController {
   })
   async changePassword(
     @Body() body: ChangePasswordDto,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
   ) {
     return this.profileService.changePassword(body, user);
   }
@@ -49,8 +68,59 @@ export class ProfileController {
   })
   async editProfile(
     @Body() body: EditProfileDto,
-    @AuthenticatedUser() user: IUser,
+    @AuthenticatedUser() user: UserDocument,
   ) {
     return this.profileService.editProfile(body, user);
+  }
+
+  @Post('edit-profile-image')
+  @ApiOperation({
+    summary: `Used to edit a user's profile image`,
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req: Request, file, callback) => {
+        if (
+          !file.mimetype.includes('jpg') &&
+          !file.mimetype.includes('jpeg') &&
+          !file.mimetype.includes('png')
+        ) {
+          return callback(
+            new BadRequestException('Image must be of type jpg, jpeg or png'),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+      limits: {
+        fileSize: Math.pow(1024, 6), //3mb
+      },
+    }),
+  )
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiConsumes('multipart/form-data')
+  async editProfileImage(
+    @AuthenticatedUser() user: UserDocument,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.profileService.editProfileImage(file, user);
+  }
+
+  @Post('get-users')
+  @ApiOperation({
+    summary: `Gets a list of users on the platform`,
+  })
+  getUsers(@Query() query: FindManyDto) {
+    return this.profileService.getUsers(query);
   }
 }

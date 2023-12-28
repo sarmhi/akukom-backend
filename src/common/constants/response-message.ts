@@ -14,6 +14,7 @@ export class ResponseMessage {
     'Oops!. Something went wrong. Try again or contact support';
   static PROFILE_NOT_FOUND: 'Profile not found';
   static EMAIL_NOT_FOUND: 'Email not found';
+  static USER_FOUND: 'User found';
 
   static ALREADY_EXIST(entity: string): string {
     return `${entity} already exists`;

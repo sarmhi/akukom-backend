@@ -8,6 +8,10 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
+import { FamilyService } from './family/services/family.service';
+import { FamilyController } from './family/controllers/family.controller';
+import { FamilyModule } from './family/family.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   imports: [
@@ -18,9 +22,11 @@ import { ConfigModule } from '@nestjs/config';
     AuthModule,
     UserModule,
     DatabaseModule,
+    FamilyModule,
+    FirebaseModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, FamilyController],
+  providers: [AppService, FamilyService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

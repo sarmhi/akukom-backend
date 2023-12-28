@@ -10,10 +10,12 @@ import {
   IsBoolean,
   IsEnum,
 } from 'class-validator';
-import { HydratedDocument } from 'mongoose';
+import mongoose, { HydratedDocument, ObjectId } from 'mongoose';
 import * as mongoosePaginate from 'mongoose-paginate-v2';
 import * as bcrypt from 'bcryptjs';
 import { Status } from 'src/common';
+import { Collections } from 'src/collections';
+import { FamilyDocument } from 'src/family';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -103,6 +105,24 @@ export class User {
   })
   tribe?: string;
 
+  @Prop({ type: String })
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    description: 'Users Image',
+  })
+  image?: string;
+
+  @Prop({ type: String })
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    description: 'key used to save image in the bucket',
+  })
+  imageKey?: string;
+
   @Prop({ type: String, default: Status.ACTIVE })
   @IsNotEmpty()
   @IsEnum(Status)
@@ -111,6 +131,17 @@ export class User {
     description: 'Account status',
   })
   status: Status;
+
+  @Prop({
+    default: [],
+    type: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: Collections.family,
+      },
+    ],
+  })
+  family?: (string | ObjectId | FamilyDocument)[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

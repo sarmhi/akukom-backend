@@ -27,7 +27,6 @@ async function bootstrap() {
     .setTitle('akukom')
     .setDescription(`Akukom's API description`)
     .addBearerAuth();
-
   const document = SwaggerModule.createDocument(app, options.build());
   SwaggerModule.setup('api/akukom/docs', app, document);
   await app.listen(port, () => {
