@@ -7,11 +7,15 @@ export class FirebaseService {
   private readonly initializedApp: firebase.app.App;
 
   constructor(private readonly configService: ConfigService) {
+    const { privateKey } = JSON.parse(
+      this.configService.get<string>('PRIVATE_KEY'),
+    );
+
     const firebaseConfig = {
       type: this.configService.get<string>('TYPE'),
       project_id: this.configService.get<string>('PROJECT_ID'),
       private_key_id: this.configService.get<string>('PRIVATE_KEY_ID'),
-      private_key: this.configService.get<string>('PRIVATE_KEY'),
+      private_key: privateKey,
       client_email: this.configService.get<string>('CLIENT_EMAIL'),
       client_id: this.configService.get<string>('CLIENT_ID'),
       auth_uri: this.configService.get<string>('AUTH_URI'),
