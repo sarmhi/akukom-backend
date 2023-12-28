@@ -135,8 +135,8 @@ export class FamilyController {
   @ApiOperation({
     summary: `Used to get a user's pending requests`,
     description: `It gets both the requests of users wishing to join a faimly youre an admin of(youre the creator and youd 
-      find the users in the 'pendingUserRequests' field) as well as request of family wishing to add you to the family(Your id would be in
-      the 'pendingFamilyInvitations' field)`,
+      find the user making the request in the 'user' field, requestType='user_request') as well as request of family wishing to add you to the family(Your id would be in
+      the 'user' field, requestType='family_invitation')`,
   })
   async getPendingRequests(@AuthenticatedUser() user: UserDocument) {
     return this.familyService.getPendingRequests(user);
@@ -147,7 +147,7 @@ export class FamilyController {
     summary: `Used to search for family a logged in user can join`,
     description: `search field is required.`,
   })
-  async getListOfFamilyUserCanJoin(query: FindManyDto) {
+  async getListOfFamilyUserCanJoin(@Query() query: FindManyDto) {
     return this.familyService.getListOfFamilyUserCanJoin(query);
   }
 
@@ -192,7 +192,7 @@ export class FamilyController {
     summary: `Used to get a list of families a logged in user has`,
   })
   async getUsersFamily(
-    query: FindManyDto,
+    @Query() query: FindManyDto,
     @AuthenticatedUser() user: UserDocument,
   ) {
     return this.familyService.getUsersFamily(query, user);

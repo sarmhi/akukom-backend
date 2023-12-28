@@ -1,5 +1,5 @@
 export enum Collections {
   users = 'users',
-  family = 'family',
+  family = 'families',
   request = 'request',
 }

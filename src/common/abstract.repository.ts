@@ -1,6 +1,7 @@
 import { FindMany, FindOne, PaginateResult } from './interfaces';
 import { Logger } from '@nestjs/common';
 import {
+  AggregateOptions,
   ClientSession,
   Connection,
   Document,
@@ -8,6 +9,7 @@ import {
   Model,
   PaginateModel,
   PaginateOptions,
+  PipelineStage,
   ProjectionType,
   QueryOptions,
   SaveOptions,
@@ -23,6 +25,10 @@ export abstract class AbstractRepository<T extends Document> {
     protected readonly model: Model<T> | PaginateModel<T>,
     private readonly connection: Connection,
   ) {}
+
+  async aggregate(pipeline?: PipelineStage[], options?: AggregateOptions) {
+    return this.model.aggregate(pipeline, options);
+  }
 
   async countDocuments(filterQuery: FilterQuery<T>): Promise<number> {
     return this.model.countDocuments(filterQuery);

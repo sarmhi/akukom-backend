@@ -18,7 +18,8 @@ import {
 } from '../dtos/family.dto';
 import { FileService, FindManyDto, ResponseMessage } from 'src/common';
 import { Family, RequestStatus, RequestType } from '../models';
-import { ObjectId } from 'mongoose';
+import mongoose, { ObjectId } from 'mongoose';
+import { Collections } from 'src/collections';
 
 @Injectable()
 export class FamilyService {
@@ -45,6 +46,7 @@ export class FamilyService {
       creator: user.id,
       image: url,
       imageKey: key,
+      members: [user.id],
     });
     user.family = createdFamily.id;
     await user.save();
@@ -134,7 +136,7 @@ export class FamilyService {
       user,
     );
 
-    if (foundFamilyInDb.creator !== user.id)
+    if (foundFamilyInDb.creator.toString() !== user.id)
       throw new ConflictException('Only admins can add members');
 
     const clonedMembers = [...foundFamilyInDb.members];
@@ -173,12 +175,53 @@ export class FamilyService {
   }
 
   async getPendingRequests(user: UserDocument) {
-    const foundFamilyInvites = await this.requestRepo.find(
+    const foundFamilyInvites = await this.requestRepo.aggregate([
       {
-        $or: [{ family: { creator: user.id } }, { user: user.id }],
+        $lookup: {
+          from: Collections.family,
+          localField: 'family',
+          foreignField: '_id',
+          as: 'family',
+        },
       },
-      { populate: ['family', 'user'] },
-    );
+      {
+        $lookup: {
+          from: Collections.users,
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$family' },
+      { $unwind: '$user' },
+      {
+        $match: {
+          $and: [
+            {
+              $or: [
+                { 'user._id': new mongoose.mongo.ObjectId(user.id) },
+                { 'family.creator': new mongoose.mongo.ObjectId(user.id) },
+              ],
+            },
+            { status: RequestStatus.PENDING },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          id: '$_id',
+          'family.id': '$family._id',
+          'user.id': '$user._id',
+        },
+      },
+      {
+        $project: {
+          'family._id': 0,
+          'user._id': 0,
+          _id: 0,
+        },
+      },
+    ]);
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
@@ -253,18 +296,18 @@ export class FamilyService {
       throw new ConflictException(`User is already a member of this family`);
 
     const newRequest = await this.requestRepo.create({
-      requestType: RequestType.FAMILY_INVITATION,
+      requestType: RequestType.USER_REQUEST,
       user: user.id,
       family: familyId,
     });
     foundFamilyInDb.pendingRequests.push(newRequest.id);
-    const updatedFamilyInDb = await foundFamilyInDb.save();
+    await foundFamilyInDb.save();
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
       success: true,
       statusCode: HttpStatus.OK,
-      data: updatedFamilyInDb,
+      data: newRequest,
     };
   }
 
@@ -276,37 +319,70 @@ export class FamilyService {
       { populate: ['user', 'family'] },
     );
     if (!foundRequestInDb) throw new NotFoundException('Request not found');
+    if (foundRequestInDb.status !== RequestStatus.PENDING)
+      throw new ConflictException('Request has been proccessed previously');
+
+    const foundFamilyInDb = await this.familyRepo.findById(
+      foundRequestInDb.family.id,
+      {},
+      { populate: ['members'] },
+    );
+    if (!foundFamilyInDb) throw new NotFoundException('Family not found');
+    if (foundFamilyInDb.members.includes(foundRequestInDb.user))
+      throw new ConflictException(
+        'The requesting user is already a member of the family',
+      );
 
     if (foundRequestInDb.requestType === RequestType.FAMILY_INVITATION) {
-      if (foundRequestInDb.family.id !== user.id)
+      if (foundRequestInDb.user.id !== user.id)
         throw new UnauthorizedException(
           'User cannot accept or decline an invitation that is not his',
         );
+      if (accepted) {
+        foundRequestInDb.status = RequestStatus.ACCEPTED;
+
+        user.family.push(foundFamilyInDb.id);
+        foundFamilyInDb.members.push(foundRequestInDb.user);
+        await user.save();
+      }
     } else {
-      if (foundRequestInDb.family.creator !== user.id)
+      if (foundRequestInDb.family.creator.toString() !== user.id)
         throw new UnauthorizedException(
           'User can only accept or decline an invitation into a family that he is the admin',
         );
+      if (accepted) {
+        foundRequestInDb.status = RequestStatus.ACCEPTED;
+        const userMakingRequest = await this.userRepo.findById(
+          foundRequestInDb.user.id,
+        );
+        if (!userMakingRequest)
+          throw new NotFoundException('User that made the request not found');
+
+        userMakingRequest.family.push(foundFamilyInDb.id);
+        foundFamilyInDb.members.push(userMakingRequest);
+        await userMakingRequest.save();
+      }
     }
-    if (accepted) {
-      foundRequestInDb.status = RequestStatus.ACCEPTED;
-      const foundFamilyInDb = await this.familyRepo.findById(
-        foundRequestInDb.family.id,
-        {},
-        { populate: ['members'] },
-      );
-      if (!foundFamilyInDb) throw new NotFoundException('Family not found');
-      foundFamilyInDb.members.push(user.id);
-    } else {
+
+    foundFamilyInDb.pendingRequests = foundFamilyInDb.pendingRequests.filter(
+      (request) => {
+        return request.toString() !== requestId;
+      },
+    );
+
+    if (!accepted) {
       foundRequestInDb.status = RequestStatus.DECLINED;
     }
-    const updatedRequestInDb = await foundRequestInDb.save();
+
+    await foundRequestInDb.save();
+
+    const updatedFamilyInDb = await foundFamilyInDb.save();
 
     return {
       message: ResponseMessage.REQUEST_SUCCESSFUL,
       success: true,
       statusCode: HttpStatus.OK,
-      data: updatedRequestInDb,
+      data: updatedFamilyInDb,
     };
   }
 
@@ -353,7 +429,7 @@ export class FamilyService {
     const userFamilies: (string | ObjectId | Family)[] =
       foundUserInDb.family as (ObjectId | string | Family)[];
 
-    if (!userFamilies.some((item) => item === familyId))
+    if (!userFamilies.some((item) => item.toString() === familyId))
       throw new ConflictException('User is not a member of this Family.');
 
     const foundFamilyInDb = await this.familyRepo.findById(
