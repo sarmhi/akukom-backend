@@ -16,6 +16,7 @@ import * as bcrypt from 'bcryptjs';
 import { Status } from 'src/common';
 import { Collections } from 'src/collections';
 import { FamilyDocument } from 'src/family';
+import { StoryDocument } from 'src/story';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -142,6 +143,17 @@ export class User {
     ],
   })
   family?: (string | ObjectId | FamilyDocument)[];
+
+  @Prop({
+    default: [],
+    type: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: Collections.story,
+      },
+    ],
+  })
+  stories?: (string | ObjectId | StoryDocument)[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

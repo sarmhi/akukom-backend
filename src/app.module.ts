@@ -12,6 +12,7 @@ import { FamilyService } from './family/services/family.service';
 import { FamilyController } from './family/controllers/family.controller';
 import { FamilyModule } from './family/family.module';
 import { FirebaseModule } from './firebase/firebase.module';
+import { StoryModule } from './story/story.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { FirebaseModule } from './firebase/firebase.module';
     DatabaseModule,
     FamilyModule,
     FirebaseModule,
+    StoryModule,
   ],
   controllers: [AppController, FamilyController],
   providers: [AppService, FamilyService],

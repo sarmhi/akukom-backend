@@ -1,13 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoosePaginate from 'mongoose-paginate-v2';
-import { UserDocument } from '../../user/models/user.model';
 import mongoose, { HydratedDocument, ObjectId } from 'mongoose';
 import { Collections } from 'src/collections';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { EventDocument } from './events.model';
+import { StoryMediaDocument } from './story-media.model';
+import { StoryCommentDocument } from './story-comments.model';
+import { UserDocument } from 'src/user';
 
-export type FamilyDocument = HydratedDocument<Family>;
+export type StoryDocument = HydratedDocument<Story>;
 
 @Schema({
   versionKey: false,
@@ -20,7 +21,7 @@ export type FamilyDocument = HydratedDocument<Family>;
     },
   },
 })
-export class Family {
+export class Story {
   @Prop({ type: String })
   @IsNotEmpty()
   @IsString()
@@ -29,28 +30,10 @@ export class Family {
     example: 'The Okafors',
     description: 'Name of the family',
   })
-  name: string;
+  title: string;
 
   @Prop({ type: String })
   @IsOptional()
-  @IsString()
-  @ApiProperty({
-    type: String,
-    description: 'Familys Image',
-  })
-  image?: string;
-
-  @Prop({ type: String })
-  @IsOptional()
-  @IsString()
-  @ApiProperty({
-    type: String,
-    description: 'key used to save image in the bucket',
-  })
-  imageKey?: string;
-
-  @Prop({ type: String })
-  @IsNotEmpty()
   @IsString()
   @ApiProperty({
     type: String,
@@ -58,7 +41,49 @@ export class Family {
       'We are here to have laughs and chat with one another while sending pictures to one another. It’s so lovely to have everyone hereee! Let’s go!',
     description: 'Description of the family',
   })
-  description: string;
+  description?: string;
+
+  @Prop({ type: String })
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    example: 'Badagry',
+    description: 'Location where story took or is taking place',
+  })
+  location?: string;
+
+  @Prop({
+    type: Date,
+  })
+  @IsOptional()
+  date?: Date;
+
+  @Prop({
+    default: [],
+    type: [
+      { type: mongoose.Schema.Types.ObjectId, ref: Collections.story_media },
+    ],
+  })
+  media: (string | ObjectId | StoryMediaDocument)[];
+
+  @Prop({ type: String })
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    description: 'Story media',
+  })
+  coverImageUrl?: string;
+
+  @Prop({ type: String })
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    description: 'key used to save media in the bucket',
+  })
+  coverImageKey?: string;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
@@ -71,11 +96,11 @@ export class Family {
     type: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: Collections.request,
+        ref: Collections.story_comments,
       },
     ],
   })
-  pendingRequests?: (string | ObjectId | Request)[] = [];
+  comments: (string | ObjectId | StoryCommentDocument)[];
 
   @Prop({
     default: [],
@@ -86,19 +111,19 @@ export class Family {
       },
     ],
   })
-  members: (string | ObjectId | UserDocument)[] = [];
+  taggedUsers: (string | ObjectId | UserDocument)[];
 
   @Prop({
     default: [],
     type: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: Collections.events,
+        ref: Collections.users,
       },
     ],
   })
-  events: (string | ObjectId | EventDocument)[] = [];
+  storyBuddies: (string | ObjectId | UserDocument)[];
 }
 
-export const FamilySchema = SchemaFactory.createForClass(Family);
-FamilySchema.plugin(mongoosePaginate);
+export const StorySchema = SchemaFactory.createForClass(Story);
+StorySchema.plugin(mongoosePaginate);

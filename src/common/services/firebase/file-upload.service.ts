@@ -76,6 +76,62 @@ export class FileService {
     }
   }
 
+  async uploadMultipleFiles(
+    files: Array<{ dataBuffer: Buffer; filename: string; mimetype: string }>,
+  ): Promise<Array<{ url: string; key: string }>> {
+    try {
+      const uploadPromises = files.map(async (fileData) => {
+        const { dataBuffer, filename, mimetype } = fileData;
+        const uniqueFileName = `${Date.now()}-${filename}`;
+        const file = this.bucket.file(uniqueFileName);
+
+        const fileStream = file.createWriteStream({
+          metadata: {
+            contentType: mimetype,
+          },
+          resumable: false,
+        });
+
+        const uploadPromise = new Promise<{ url: string; key: string }>(
+          (resolve, reject) => {
+            fileStream.on('error', (err) => {
+              this.logger.error(err);
+              reject(
+                new InternalServerErrorException(
+                  'An error occurred while uploading file',
+                ),
+              );
+            });
+
+            fileStream.on('finish', async () => {
+              this.logger.log(`File ${uniqueFileName} uploaded successfully.`);
+              const publicUrl = await file.getSignedUrl({
+                action: 'read',
+                expires: '03-09-2491',
+              });
+
+              resolve({
+                url: publicUrl[0],
+                key: uniqueFileName,
+              });
+            });
+
+            fileStream.end(dataBuffer);
+          },
+        );
+
+        return uploadPromise;
+      });
+
+      return Promise.all(uploadPromises);
+    } catch (err) {
+      this.logger.error(err);
+      throw new InternalServerErrorException(
+        'An error occurred while uploading files',
+      );
+    }
+  }
+
   async deletePublicFile(key: string) {
     this.logger.debug(`deleting public file: ${key}`);
     try {
@@ -88,6 +144,27 @@ export class FileService {
       this.logger.error('Error deleting file:', err);
       throw new InternalServerErrorException(
         'An error occurred while deleting the file',
+      );
+    }
+  }
+
+  async deleteMultiplePublicFiles(keys: string[]) {
+    try {
+      const deletionPromises = keys.map(async (key) => {
+        const fileExists = await this.checkFileExists(key);
+        if (fileExists) {
+          const file = this.bucket.file(key);
+          await file.delete();
+          return true;
+        }
+        return false;
+      });
+
+      return Promise.all(deletionPromises);
+    } catch (err) {
+      // Handle errors as needed
+      throw new InternalServerErrorException(
+        'An error occurred while deleting files',
       );
     }
   }

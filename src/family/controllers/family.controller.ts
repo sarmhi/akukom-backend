@@ -19,25 +19,26 @@ import {
 } from '@nestjs/swagger';
 import { JwtUserAuthGuard } from 'src/common/guards/user/jwt.guard';
 import { FamilyService } from '../services';
-import {
-  AcceptPendingRequest,
-  AddFamilyMembers,
-  CreateFamilyDto,
-  EditFamilyDto,
-  GetFamilyList,
-} from '../dtos/family.dto';
+
 import { AuthenticatedUser, FindManyDto } from 'src/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserDocument } from 'src/user';
+import {
+  CreateFamilyDto,
+  EditFamilyDto,
+  AddFamilyMembers,
+  GetFamilyList,
+  AcceptPendingRequest,
+  CreateFamilyEvent,
+} from '../dtos';
 
 @ApiTags('Family')
 @ApiBearerAuth()
+@UseGuards(JwtUserAuthGuard)
 @Controller({
   version: '1',
   path: 'family',
 })
-@UseGuards(JwtUserAuthGuard)
-@Controller('family')
 export class FamilyController {
   private readonly logger: Logger = new Logger(FamilyController.name);
   constructor(private readonly familyService: FamilyService) {}
@@ -196,5 +197,46 @@ export class FamilyController {
     @AuthenticatedUser() user: UserDocument,
   ) {
     return this.familyService.getUsersFamily(query, user);
+  }
+
+  @Get('get-family-events')
+  @ApiOperation({ summary: 'Get family events' })
+  async getFamilyEvents(
+    @Query() query: FindManyDto,
+    @AuthenticatedUser() user: UserDocument,
+  ) {
+    return this.familyService.getFamilyEvents(query, user);
+  }
+
+  @Post('create-family-event/:familyId')
+  @ApiOperation({ summary: 'Create family event' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req: Request, file, callback) => {
+        if (
+          !file.mimetype.includes('jpg') &&
+          !file.mimetype.includes('jpeg') &&
+          !file.mimetype.includes('png')
+        ) {
+          return callback(
+            new BadRequestException('Image must be of type jpg, jpeg or png'),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+      limits: {
+        fileSize: Math.pow(1024, 6),
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data', 'json')
+  async createFamilyEvent(
+    @Body() body: CreateFamilyEvent,
+    @Param('familyId') familyId: string,
+    @AuthenticatedUser() user: UserDocument,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.familyService.createFamilyEvent(body, familyId, user, file);
   }
 }

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsBoolean,
+  IsDate,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
@@ -19,8 +20,8 @@ export class CreateFamilyDto {
   @IsString()
   description: string;
 
-  @ApiProperty({ type: 'string', format: 'binary', required: true })
-  file: Express.Multer.File;
+  @ApiProperty({ type: 'string', format: 'binary' })
+  file?: Express.Multer.File;
 }
 
 export class EditFamilyDto {
@@ -72,4 +73,31 @@ export class AcceptPendingRequest {
   @IsString()
   @IsNotEmpty()
   requestId: string;
+}
+
+export class CreateFamilyEvent {
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @IsDate()
+  @IsOptional()
+  startDate?: Date;
+
+  @IsDate()
+  @IsOptional()
+  stopDate?: Date;
+
+  @ApiProperty({ type: 'string', format: 'binary' })
+  file?: Express.Multer.File;
+}
+
+export class InviteEventGuests {
+  @IsMongoId({ each: true })
+  @ArrayMinSize(1)
+  attendees?: ObjectId[];
 }
