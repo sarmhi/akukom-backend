@@ -5,9 +5,9 @@ import mongoose, { HydratedDocument, ObjectId } from 'mongoose';
 import { Collections } from 'src/collections';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { EventDocument } from './events.model';
+import { FamilyDocument } from './family.model';
 
-export type FamilyDocument = HydratedDocument<Family>;
+export type EventDocument = HydratedDocument<Event>;
 
 @Schema({
   versionKey: false,
@@ -20,45 +20,44 @@ export type FamilyDocument = HydratedDocument<Family>;
     },
   },
 })
-export class Family {
+export class Event {
   @Prop({ type: String })
   @IsNotEmpty()
   @IsString()
   @ApiProperty({
     type: String,
     example: 'The Okafors',
-    description: 'Name of the family',
+    description: 'Name of the Event',
   })
   name: string;
-
-  @Prop({ type: String })
-  @IsOptional()
-  @IsString()
-  @ApiProperty({
-    type: String,
-    description: 'Familys Image',
-  })
-  image?: string;
-
-  @Prop({ type: String })
-  @IsOptional()
-  @IsString()
-  @ApiProperty({
-    type: String,
-    description: 'key used to save image in the bucket',
-  })
-  imageKey?: string;
 
   @Prop({ type: String })
   @IsNotEmpty()
   @IsString()
   @ApiProperty({
     type: String,
-    example:
-      'We are here to have laughs and chat with one another while sending pictures to one another. It’s so lovely to have everyone hereee! Let’s go!',
-    description: 'Description of the family',
+    description: 'Story media',
   })
-  description: string;
+  coverImageUrl?: string;
+
+  @Prop({ type: String })
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    description: 'key used to save media in the bucket',
+  })
+  coverImageKey?: string;
+
+  @Prop({ type: String })
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    type: String,
+    example: 'Lekki',
+    description: 'Location of the Event',
+  })
+  location?: string;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
@@ -67,15 +66,16 @@ export class Family {
   creator: UserDocument;
 
   @Prop({
-    default: [],
-    type: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: Collections.request,
-      },
-    ],
+    type: Date,
   })
-  pendingRequests?: (string | ObjectId | Request)[] = [];
+  @IsOptional()
+  startDate?: Date;
+
+  @Prop({
+    type: Date,
+  })
+  @IsOptional()
+  stopDate?: Date;
 
   @Prop({
     default: [],
@@ -86,19 +86,14 @@ export class Family {
       },
     ],
   })
-  members: (string | ObjectId | UserDocument)[] = [];
+  guests: (string | ObjectId | UserDocument)[] = [];
 
   @Prop({
-    default: [],
-    type: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: Collections.events,
-      },
-    ],
+    type: mongoose.Schema.Types.ObjectId,
+    ref: Collections.family,
   })
-  events: (string | ObjectId | EventDocument)[] = [];
+  family: string | ObjectId | FamilyDocument;
 }
 
-export const FamilySchema = SchemaFactory.createForClass(Family);
-FamilySchema.plugin(mongoosePaginate);
+export const EventSchema = SchemaFactory.createForClass(Event);
+EventSchema.plugin(mongoosePaginate);

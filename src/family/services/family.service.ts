@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpStatus,
   Injectable,
@@ -8,18 +9,24 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserDocument, UserRepository } from 'src/user';
-import { FamilyRepository, RequestRepository } from '../repository';
 import {
-  AcceptPendingRequest,
-  AddFamilyMembers,
-  CreateFamilyDto,
-  EditFamilyDto,
-  GetFamilyList,
-} from '../dtos/family.dto';
+  EventRepository,
+  FamilyRepository,
+  RequestRepository,
+} from '../repository';
 import { FileService, FindManyDto, ResponseMessage } from 'src/common';
 import { Family, RequestStatus, RequestType } from '../models';
 import mongoose, { ObjectId } from 'mongoose';
 import { Collections } from 'src/collections';
+import {
+  CreateFamilyDto,
+  EditFamilyDto,
+  AddFamilyMembers,
+  GetFamilyList,
+  AcceptPendingRequest,
+  CreateFamilyEvent,
+} from '../dtos';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class FamilyService {
@@ -29,6 +36,7 @@ export class FamilyService {
     private readonly familyRepo: FamilyRepository,
     private readonly fileService: FileService,
     private readonly requestRepo: RequestRepository,
+    private readonly eventsRepo: EventRepository,
   ) {}
 
   async createFamily(
@@ -406,6 +414,111 @@ export class FamilyService {
       success: true,
       statusCode: HttpStatus.OK,
       data: foundFamilyInDb,
+    };
+  }
+
+  async getFamilyEvents(query: FindManyDto, user: UserDocument) {
+    const { search } = query;
+
+    const condition: any = {
+      $or: [{ creator: user.id }, { guests: user.id }],
+    } as { $or: ({ creator: any } | { guests: any })[] };
+
+    if (search) {
+      condition.$or.push(
+        {
+          $and: [
+            { name: { $regex: search, $options: 'i' } },
+            { $or: [{ creator: user.id }, { guests: user.id }] },
+          ],
+        },
+        {
+          $and: [
+            { location: { $regex: search, $options: 'i' } },
+            { $or: [{ creator: user.id }, { guests: user.id }] },
+          ],
+        },
+      );
+    }
+
+    const foundEventsInDb = await this.eventsRepo.findManyWithPagination(
+      condition,
+      query,
+    );
+
+    return {
+      message: ResponseMessage.REQUEST_SUCCESSFUL,
+      success: true,
+      statusCode: HttpStatus.OK,
+      data: foundEventsInDb,
+    };
+  }
+
+  async createFamilyEvent(
+    body: CreateFamilyEvent,
+    familyId: string,
+    user: UserDocument,
+    file?: Express.Multer.File,
+  ) {
+    let updatedFamilyInDb;
+    const { name, location, startDate, stopDate } = body;
+    const eventStartDate = dayjs(startDate);
+    const eventEndDate = dayjs(stopDate);
+    if (eventStartDate.isBefore(dayjs().format('MM/DD/YYYY')))
+      throw new BadRequestException(
+        'Start date cannot be before today!, please check your dates',
+      );
+    if (eventStartDate.isAfter(eventEndDate))
+      throw new BadRequestException(
+        'Start date cannot be after end date!, please check your dates',
+      );
+
+    const { foundFamilyInDb } = await this.validateFamilyMembership(
+      familyId,
+      user,
+    );
+
+    const session = await this.familyRepo.startTransaction();
+    try {
+      let coverUrl;
+      let coverKey;
+      if (file) {
+        const { url, key } = await this.fileService.uploadPublicFile(
+          file.buffer,
+          `event-image-${file.originalname}`,
+          file.mimetype,
+        );
+        coverUrl = url;
+        coverKey = key;
+      }
+      const newEvent = await this.eventsRepo.create({
+        location,
+        name,
+        creator: user.id,
+        startDate,
+        stopDate,
+        coverImageUrl: coverUrl,
+        coverImageKey: coverKey,
+        family: foundFamilyInDb.id,
+      });
+      foundFamilyInDb.events.push(newEvent.id);
+      updatedFamilyInDb = await foundFamilyInDb.save();
+      await session.commitTransaction();
+    } catch (err) {
+      await session.abortTransaction();
+      this.logger.error({ error: err });
+      throw new InternalServerErrorException(
+        'Unable to add members at this moment, please try again later.',
+      );
+    } finally {
+      await session.endSession();
+    }
+
+    return {
+      message: ResponseMessage.REQUEST_SUCCESSFUL,
+      success: true,
+      statusCode: HttpStatus.OK,
+      data: updatedFamilyInDb,
     };
   }
 
